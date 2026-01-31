@@ -152,7 +152,7 @@ class AnalysisPan(QtWidgets.QSplitter):
 # #############################################################################
 # ## MAIN WINDOW
 # #############################################################################
-class IAMusicaMainWindow(QtWidgets.QMainWindow):
+class AMTMainWindow(QtWidgets.QMainWindow):
     """
     """
 

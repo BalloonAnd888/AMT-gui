@@ -1,4 +1,3 @@
-
 # -*- coding:utf-8 -*-
 
 
@@ -61,13 +60,13 @@ class MouseEventManager:
         """
         b = event.button()
         if b == QtCore.Qt.MouseButton.LeftButton:
-            self.last_left_press_pos = event.pos()
+            self.last_left_press_pos = event.position().toPoint()
             self.on_left_press(event)
         elif b == QtCore.Qt.MouseButton.MidButton:
-            self.last_mid_press_pos = event.pos()
+            self.last_mid_press_pos = event.position().toPoint()
             self.on_mid_press(event)
         elif b == QtCore.Qt.MouseButton.RightButton:
-            self.last_right_press_pos = event.pos()
+            self.last_right_press_pos = event.position().toPoint()
             self.on_right_press(event)
 
     def mouseReleaseEvent(self, event):
@@ -76,19 +75,19 @@ class MouseEventManager:
         """
         b = event.button()
         if b == QtCore.Qt.MouseButton.LeftButton:
-            self.last_left_release_pos = event.pos()
+            self.last_left_release_pos = event.position().toPoint()
             self.on_left_release(event)
         elif b == QtCore.Qt.MouseButton.MidButton:
-            self.last_mid_release_pos = event.pos()
+            self.last_mid_release_pos = event.position().toPoint()
             self.on_mid_release(event)
         elif b == QtCore.Qt.MouseButton.RightButton:
-            self.last_right_release_pos = event.pos()
+            self.last_right_release_pos = event.position().toPoint()
             self.on_right_release(event)
 
     def mouseMoveEvent(self, event):
         """
         """
-        p = event.pos()
+        p = event.position().toPoint()
         # this does happen! filter out
         if p == self.last_move_pos:
             return
@@ -96,7 +95,7 @@ class MouseEventManager:
         bbb = event.buttons()
         # button codes: https://doc.qt.io/qt-5/qt.html#MouseButton-enum
         has_l = bool(bbb & QtCore.Qt.MouseButton.LeftButton)
-        has_m = bool(bbb & QtCore.Qt.MouseButton.MidButton)
+        has_m = bool(bbb & QtCore.Qt.MouseButton.MiddleButton)
         has_r = bool(bbb & QtCore.Qt.MouseButton.RightButton)
         #
         self.on_move(event, has_l, has_m, has_r, p, self.last_move_pos)

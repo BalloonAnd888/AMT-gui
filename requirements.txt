@@ -8,3 +8,4 @@ matplotlib
 scipy
 qdarkstyle
 coloredlogs
+pandas

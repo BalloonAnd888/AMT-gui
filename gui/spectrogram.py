@@ -289,7 +289,7 @@ class RollView(MouseEventManager, SpectrogramView):
         """
         """
         b = event.button()
-        x, y = self.mapToScene(event.pos()).toTuple()
+        x, y = self.mapToScene(event.position().toPoint()).toTuple()
         if b == QtCore.Qt.MouseButton.LeftButton:
             # left double click
             self.create_vgrid(x)
@@ -337,7 +337,7 @@ class RollView(MouseEventManager, SpectrogramView):
     def on_left_press(self, event):
         """
         """
-        x, y = self.mapToScene(event.pos()).toTuple()
+        x, y = self.mapToScene(event.position().toPoint()).toTuple()
         self.create_selrect(x, y)
 
     def on_left_release(self, event):
@@ -352,7 +352,7 @@ class RollView(MouseEventManager, SpectrogramView):
         """
         if self.selrect is not None:
             rect = self.selrect.rect()
-            x2, y2 = self.mapToScene(event.pos()).toTuple()
+            x2, y2 = self.mapToScene(event.position().toPoint()).toTuple()
             rect.setBottomRight(QtCore.QPoint(x2, y2))
             self.selrect.setRect(rect)
 
@@ -661,3 +661,4 @@ class SpecRollView(QtWidgets.QSplitter):
                 roll_scene.matrix,
                 cmap=mscontrols_state[self.mscontrols.ROLL_CMAP_TEXT],
                 vmin=self.ROLL_RANGE[0], vmax=self.ROLL_RANGE[1])
+            

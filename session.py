@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
@@ -163,7 +162,7 @@ class DemoSession:
         """
         raise NotImplementedError("DemoSession.save")
 
-    def __init__(self, logmel_fn, ov_model, h5w, h5m, h5o,
+    def __init__(self, logmel_fn=None, ov_model=None, h5w=None, h5m=None, h5o=None,
                  wav_samplerate=16000, wav_in_numhops=4,
                  inference_params_fn=lambda: (0.5, (10, 50, 10), 0, 0)):
         """
@@ -191,6 +190,9 @@ class DemoSession:
         # h5wav_path = os.path.join(sess_dir, "wav_" + self.ts + ".h5")
         # h5mel_path = os.path.join(sess_dir, "mel_" + self.ts + ".h5")
         # h5onset_path = os.path.join(sess_dir, "onset_" + self.ts + ".h5")
+
+        if logmel_fn is None:
+            return
 
         # pointers to the inference moduoles
         assert logmel_fn.samplerate == wav_samplerate, \
@@ -439,3 +441,4 @@ class DemoSession:
         self.h5o.append(roll, metadata_str="")
         self.fill_blank_mel_roll_up_to_wav(self.FILL_MEL, self.FILL_ROLL)
         print(f"[SESSION] added! ({mel.shape}, {roll.shape})")
+        

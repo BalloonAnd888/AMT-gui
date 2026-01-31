@@ -22,28 +22,21 @@ def change_label_font(lbl, weight=50, size_pt=None):
     """
     """
     fnt = lbl.font()
-    # PySide6 strictness: setWeight expects QFont.Weight enum
     if isinstance(weight, int):
-        if weight < 100:
-            if weight >= 87:
-                weight = QtGui.QFont.Weight.Black
-            elif weight >= 81:
-                weight = QtGui.QFont.Weight.ExtraBold
-            elif weight >= 75:
-                weight = QtGui.QFont.Weight.Bold
-            elif weight >= 63:
-                weight = QtGui.QFont.Weight.DemiBold
-            elif weight >= 57:
-                weight = QtGui.QFont.Weight.Medium
-            elif weight >= 50:
-                weight = QtGui.QFont.Weight.Normal
-            elif weight >= 25:
-                weight = QtGui.QFont.Weight.Light
-            else:
-                weight = QtGui.QFont.Weight.Thin
+        # Map legacy Qt5 weights (0-99) to Qt6 QFont.Weight enum
+        if weight < 37:
+            w = QtGui.QFont.Weight.Light
+        elif weight < 57:
+            w = QtGui.QFont.Weight.Normal
+        elif weight < 69:
+            w = QtGui.QFont.Weight.DemiBold
+        elif weight < 81:
+            w = QtGui.QFont.Weight.Bold
         else:
-            weight = QtGui.QFont.Weight(weight)
-    fnt.setWeight(weight)
+            w = QtGui.QFont.Weight.Black
+        fnt.setWeight(w)
+    else:
+        fnt.setWeight(weight)
     if size_pt is not None:
         fnt.setPointSize(size_pt)
     lbl.setFont(fnt)

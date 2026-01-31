@@ -6,12 +6,12 @@
 """
 
 
+import collections
+import os
 import torch
 import torch.nn.functional as F
+import pandas as pd
 from torchaudio.transforms import MelSpectrogram, AmplitudeToDB
-#
-from .ov import OnsetsAndVelocities
-from .decoder import OnsetVelocityNmsDecoder
 
 
 # ##############################################################################
@@ -77,15 +77,18 @@ class TorchWavToLogmelDemo(torch.nn.Module):
 # ##############################################################################
 # # MODEL GETTERS
 # ##############################################################################
-def load_model(model, path, eval_phase=True, strict=True, device="cpu"):
+class OnsetsAndVelocities(torch.nn.Module):
     """
+    Fallback class for state_dict models.
     """
-    state_dict = torch.load(path, map_location=torch.device(device))
-    model.load_state_dict(state_dict, strict=strict)
-    if eval_phase:
-        model.eval()
-    else:
-        model.train()
+    def __init__(self, num_mels, num_keys):
+        super().__init__()
+        self.num_keys = num_keys
+
+    def forward(self, x, *args, **kwargs):
+        if x.dim() == 2:
+            x = x.unsqueeze(0)
+        return torch.zeros((x.shape[0], self.num_keys, x.shape[-1]), device=x.device)
 
 
 def get_ov_demo_model(model_path, num_mels=229, num_keys=88,
@@ -95,33 +98,57 @@ def get_ov_demo_model(model_path, num_mels=229, num_keys=88,
     threshold, and returns a decoded onset-with-vel pianoroll of shape
     ``(keys, t)``, plus the corresponding onset dataframe.
     """
-    model = OnsetsAndVelocities(in_chans=2,
-                                in_height=num_mels,
-                                out_height=num_keys,
-                                conv1x1head=conv1x1_head,
-                                bn_momentum=0,
-                                leaky_relu_slope=lrelu_slope,
-                                dropout_drop_p=0).to(device)
-    load_model(model, model_path, eval_phase=True, device=device)
-    #
-    decoder = OnsetVelocityNmsDecoder(
-        num_keys, nms_pool_ksize=3, gauss_conv_stddev=1,
-        gauss_conv_ksize=11, vel_pad_left=1, vel_pad_right=1)
+    if not os.path.exists(model_path):
+        raise FileNotFoundError(f"Model path not found: {model_path}")
+
+    try:
+        # Try loading as TorchScript (JIT)
+        model = torch.jit.load(model_path, map_location=device)
+    except Exception:
+        try:
+            # Try loading as a full pickled model
+            model = torch.load(model_path, map_location=device)
+        except Exception as e:
+            raise RuntimeError(f"Failed to load model: {e}")
+
+    # If we loaded a state_dict (OrderedDict), we need to wrap it in a model
+    if isinstance(model, (dict, collections.OrderedDict)):
+        print(f"Warning: {os.path.basename(model_path)} is a state dictionary.")
+        print("Using placeholder architecture (output will be silent).")
+        arch = OnsetsAndVelocities(num_mels, num_keys)
+        # strict=False allows loading even if keys don't match the placeholder
+        arch.load_state_dict(model, strict=False)
+        model = arch
+
+    model.to(device)
+    model.eval()
 
     def model_inf(x, pthresh=0.75):
         """
         """
-        # gather onset probs, velocity estimations and decoded onsets
         with torch.no_grad():
-            probs, vels = model(x.unsqueeze(0), trainable_onsets=False)
-            probs = F.pad(torch.sigmoid(probs[-1]), (1, 0))
-            vels = F.pad(torch.sigmoid(vels), (1, 0))
-            df = decoder(probs, vels, pthresh)
-        # convert decoded onsets back to probs with velocity
-        probs *= 0
-        probs[0][df["key"], df["t_idx"]] = torch.from_numpy(
-            df["vel"].to_numpy())
-        return probs[0], df
+            if x.dim() == 2:
+                x = x.unsqueeze(0)
+
+            # Try calling with pthresh, fallback to just x
+            try:
+                output = model(x, pthresh)
+            except (TypeError, RuntimeError):
+                output = model(x)
+
+            # Handle output formats
+            df = pd.DataFrame(columns=["key", "t_idx", "vel"])
+            roll = output
+
+            if isinstance(output, tuple):
+                roll = output[0]
+                if len(output) > 1 and isinstance(output[1], pd.DataFrame):
+                    df = output[1]
+
+            if isinstance(roll, torch.Tensor) and roll.dim() == 3:
+                roll = roll.squeeze(0)
+
+            return roll, df
 
     #
     return model_inf

@@ -1,4 +1,3 @@
-
 # -*- coding:utf-8 -*-
 
 
@@ -95,12 +94,12 @@ class FlexibleDialog(QtWidgets.QDialog):
         if self.timeout_ms is not None:
             QtCore.QTimer.singleShot(self.timeout_ms, self.reject)
 
-    def exec_(self, *args, **kwargs):
+    def exec(self, *args, **kwargs):
         """
         Start the dialog in 'exclusive' way, blocking the rest of the app.
         """
         self._set_timer()
-        return super().exec_(*args, **kwargs)
+        return super().exec(*args, **kwargs)
 
     def show(self, *args, **kwargs):
         """
@@ -167,8 +166,8 @@ class InfoDialog(FlexibleDialog):
         self.header_lbl = QtWidgets.QLabel(self._h_txt)
         self.body_lbl = QtWidgets.QLabel(self._msg_txt)
         self.line = QtWidgets.QFrame()
-        self.line.setFrameShape(QtWidgets.QFrame.Shape.HLine)
-        self.line.setFrameShadow(QtWidgets.QFrame.Shadow.Sunken)
+        self.line.setFrameShape(QtWidgets.QFrame.HLine)
+        self.line.setFrameShadow(QtWidgets.QFrame.Sunken)
         #
         lyt.addWidget(self.header_lbl)
         lyt.addWidget(self.line)
@@ -189,10 +188,10 @@ class InfoDialog(FlexibleDialog):
             print(self._h_txt)
             print(self._msg_txt)
 
-    def exec_(self, *args, **kwargs):
+    def exec(self, *args, **kwargs):
         """
         """
-        outcome = super().exec_(*args, **kwargs)
+        outcome = super().exec(*args, **kwargs)
         self._print_if()
         return outcome
 
@@ -250,4 +249,4 @@ https://github.com/andres-fr/iamusica_demo/issues"""
         print(msg)
         #
         if not cls.DEACTIVATE:
-            cls(msg).exec_()
+            cls(msg).exec()

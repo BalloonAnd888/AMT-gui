@@ -1,4 +1,3 @@
-
 #!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
@@ -62,10 +61,9 @@ class AudioPlayer(QtWidgets.QWidget):
         self.fw_icon = self.style().standardIcon(
             QtWidgets.QStyle.StandardPixmap.SP_MediaSeekForward)
         # first create player, then setup GUI, finally connect player to GUI
-        self.media_player = QtMultimedia.QMediaPlayer(parent=self)
-        self.audio_output = QtMultimedia.QAudioOutput(parent=self)
+        self.media_player = QtMultimedia.QMediaPlayer(self)
+        self.audio_output = QtMultimedia.QAudioOutput(self)
         self.media_player.setAudioOutput(self.audio_output)
-        # self.media_player.setAudioRole(QtMultimedia.QAudio.MusicRole)
         # audio probe provides "realtime" readings from the source (the player)
         # self.probe = QtMultimedia.QAudioProbe(parent=self)
         # self.probe.setSource(self.media_player)
@@ -77,6 +75,7 @@ class AudioPlayer(QtWidgets.QWidget):
         self.media_player.positionChanged.connect(
             lambda pos: self.on_pos_update(pos, "player"))
         self.media_player.errorOccurred.connect(self.on_media_error)
+        self.media_player.mediaStatusChanged.connect(self.on_media_status_changed)
         # this is needed to break the slider<->player update loop
         self._block_slider_player_loop = False
         # initialize with disabled buttons and zero range
@@ -85,7 +84,6 @@ class AudioPlayer(QtWidgets.QWidget):
         # call this function to set the play/pause icon to media_player state
         self.on_media_state_changed()
         self.vol_s.setValue(50)  # also initialize volume
-        self.audio_output.setVolume(0.5)
         #
         self.current_qstream = None
 
@@ -186,7 +184,7 @@ class AudioPlayer(QtWidgets.QWidget):
         pos_secs = self.get_pos()
         new_pos = pos_secs + delta
         new_pos = max(new_pos, 0)
-        new_pos = min(new_pos, self.pos_s.getMaximum())
+        new_pos = min(new_pos, self.pos_s.maximum())
         self.set_pos(new_pos)
 
     def on_pos_update(self, pos, caller):
@@ -218,10 +216,9 @@ class AudioPlayer(QtWidgets.QWidget):
         LoadedMedia...)
         """
         if status == QtMultimedia.QMediaPlayer.MediaStatus.LoadedMedia:
-            pass
-            # md_keys = self.media_player.availableMetaData()
-            # for k in md_keys:
-            #     print(self.media_player.metaData(k))
+            meta_data = self.media_player.metaData()
+            # for k in meta_data.keys():
+            #     print(f"{k}: {meta_data.value(k)}")
         else:
             # disable all buttons
             pass
@@ -253,7 +250,6 @@ class AudioPlayer(QtWidgets.QWidget):
     def on_vol_change(self, vol):
         """
         """
-        # self.media_player.setVolume(vol)
         self.audio_output.setVolume(vol / 100.0)
 
     def configure_gui(self, min_val=0, max_val=0, step=0.1, pos_secs=0,

@@ -1,10 +1,9 @@
-
-# !/usr/bin/env python
+#!/usr/bin/env python
 # -*- coding:utf-8 -*-
 
 
 """
-python -m iamusica_demo
+Run the AMT Demo application.
 """
 
 
@@ -20,38 +19,22 @@ import numpy as np
 import qdarkstyle
 from PySide6 import QtWidgets, QtGui, QtCore
 # app constants
+from constants import OV_MODEL_PATH, OV_MODEL_CONV1X1_HEAD, OV_MODEL_LRELU_SLOPE
 from constants import OV_MODEL_PATH, OV_MODEL_CONV1X1_HEAD, \
     OV_MODEL_LRELU_SLOPE, WAV_SAMPLERATE, NUM_PIANO_KEYS
 from constants import MEL_FRAME_SIZE, MEL_FRAME_HOP, NUM_MELS, MEL_FMIN, MEL_FMAX, \
     MEL_WINDOW
 # app backend
 from utils import make_timestamp
-# from .models import TorchWavToLogmelDemo, get_ov_demo_model
+from models import TorchWavToLogmelDemo, get_ov_demo_model
 from session import SessionHDF5, DemoSession
 # app frontend
-from gui.main_window import IAMusicaMainWindow
+from gui.main_window import AMTMainWindow
 from gui.core.dialogs import FlexibleDialog, ExceptionDialog, InfoDialog
 
-# ##############################################################################
-# # PLACEHOLDERS
-# ##############################################################################
-class TorchWavToLogmelDemo:
-    def __init__(self, wav_samplerate, mel_frame_size, mel_frame_hop, *args, **kwargs):
-        self.samplerate = wav_samplerate
-        self.hopsize = mel_frame_hop
-        self.winsize = mel_frame_size
-
-    def __call__(self, *args, **kwargs):
-        raise NotImplementedError("Model placeholder")
-
-
-def get_ov_demo_model(*args, **kwargs):
-    def model(*args, **kwargs):
-        raise NotImplementedError("Model placeholder")
-    return model
 
 # ##############################################################################
-# # IAMUSICA APP
+# # AMT APP
 # ##############################################################################
 class QtDemoSession(QtCore.QObject, DemoSession):
     """
@@ -131,7 +114,7 @@ class SaveWarningDialog(InfoDialog):
     Usage example::
 
       self.dialog = SaveWarningDialog()
-      user_wants_to_remove = bool(self.dialog.exec_())
+      user_wants_to_remove = bool(self.dialog.exec())
       ...
     """
 
@@ -166,7 +149,7 @@ class KeymapsDialog(FlexibleDialog):
         lyt.addWidget(self.list_widget)
 
 
-class IAMusicaApp(QtWidgets.QApplication):
+class AMTApp(QtWidgets.QApplication):
     """
     """
     INFO_DIALOG_TIMEOUT_MS = 1500
@@ -199,7 +182,7 @@ class IAMusicaApp(QtWidgets.QApplication):
 
     def __init__(self,
                  # frontend
-                 app_name="IAMusica Demo", initial_display_width=800,
+                 app_name="AMT Demo", initial_display_width=800,
                  # backend
                  wav_samplerate=16000,
                  mel_frame_size=2048,
@@ -235,7 +218,7 @@ class IAMusicaApp(QtWidgets.QApplication):
         self.keymaps_dialog = KeymapsDialog(
             {k: v.toString() for k, v in self.KEYMAPS.items()})
 
-        self.main_window = IAMusicaMainWindow(
+        self.main_window = AMTMainWindow(
             initial_display_width, initial_pthresh, initial_ovif,
             initial_mel_offset, initial_mel_vshift,
             initial_spec_cmap, initial_roll_cmap, initial_vgrid_width)
@@ -243,6 +226,9 @@ class IAMusicaApp(QtWidgets.QApplication):
         self.logmel_fn = TorchWavToLogmelDemo(
             wav_samplerate, mel_frame_size, mel_frame_hop, num_mels,
             mel_fmin, mel_fmax, mel_window)
+        self.ov_model_config = {"conv1x1": ov_model_conv1x1_head,
+                                "lrelu": ov_model_lrelu_slope}
+        self.current_model_path = ov_model_path
         self.ov_model = get_ov_demo_model(
             ov_model_path, num_mels, num_piano_keys,
             ov_model_conv1x1_head, ov_model_lrelu_slope, self.TORCH_DEVICE)
@@ -261,6 +247,59 @@ class IAMusicaApp(QtWidgets.QApplication):
         self.num_analysis_histbins = num_analysis_histbins
         #
         self.connect_frontend_and_backend()
+        self.setup_model_menu()
+
+    def setup_model_menu(self):
+        """
+        Adds a 'Models' menu to the main window's menu bar.
+        """
+        menu_bar = self.main_window.menuBar()
+        self.models_menu = menu_bar.addMenu("&Models")
+        self.model_actions = QtGui.QActionGroup(self)
+
+        # Find .pt files in models directory
+        models_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "models")
+        model_items = []
+        if os.path.exists(models_dir):
+            for f in os.listdir(models_dir):
+                if f.endswith((".pt", ".torch", ".pth")):
+                    model_items.append((f, os.path.join(models_dir, f)))
+
+        # Ensure the current model is in the list
+        current_model_abs = os.path.abspath(self.current_model_path)
+        current_model_name = os.path.basename(self.current_model_path)
+        if not any(os.path.abspath(p) == current_model_abs for _, p in model_items) and os.path.exists(self.current_model_path):
+            model_items.append((current_model_name, self.current_model_path))
+        if not model_items:
+            model_items = [(current_model_name, self.current_model_path)]
+
+        for name, path in sorted(model_items, key=lambda x: x[0]):
+            action = QtGui.QAction(name, self)
+            action.setCheckable(True)
+            action.setData(path)
+            self.models_menu.addAction(action)
+            self.model_actions.addAction(action)
+            if os.path.abspath(path) == current_model_abs:
+                action.setChecked(True)
+
+        self.model_actions.triggered.connect(self.on_model_change)
+
+    def on_model_change(self, action):
+        model_path = action.data()
+        if model_path == self.current_model_path:
+            return
+        print(f"[AMTApp] Switching model to {model_path}")
+        try:
+            self.ov_model = get_ov_demo_model(
+                model_path, self.num_mels, self.num_piano_keys,
+                self.ov_model_config["conv1x1"], self.ov_model_config["lrelu"],
+                self.TORCH_DEVICE)
+            self.current_model_path = model_path
+            if self.session is not None:
+                self.session.ov_model = self.ov_model
+        except Exception as e:
+            print(f"Failed to load model: {e}")
+            QtWidgets.QMessageBox.warning(self.main_window, "Error", f"Could not load model: {e}")
 
     def connect_frontend_and_backend(self):
         """
@@ -320,7 +359,7 @@ class IAMusicaApp(QtWidgets.QApplication):
         result = True
         if self.session is not None:
             self.delete_sess_dialog = SaveWarningDialog()
-            delete_sess = bool(self.delete_sess_dialog.exec_())
+            delete_sess = bool(self.delete_sess_dialog.exec())
             if delete_sess:
                 self.session.terminate()
                 self.session = None
@@ -585,7 +624,7 @@ class ConfDef:
     :cvar ZOOM_PERCENTAGE: When zooming in/out, the width will
       decrease/increase by this percentage.
     """
-    APP: str = "iamusica_demo"
+    APP: str = "amt_demo"
     DISPLAY_WIDTH: int = 1000
     AUDIO_RECORDING_NUMHOPS: int = 4
     PTHRESH: float = 0.5
@@ -604,7 +643,7 @@ class ConfDef:
 # ##############################################################################
 # # MAIN ROUTINE
 # ##############################################################################
-def run_iamusica_demo_app(initial_display_width=400,
+def run_amt_demo_app(initial_display_width=400,
                           audio_recording_numhops=4,
                           initial_pthresh=0.5,
                           initial_ovif=(10, 50, 10),
@@ -620,7 +659,7 @@ def run_iamusica_demo_app(initial_display_width=400,
     """
     """
 
-    app = IAMusicaApp("IAMUSICA DEMO", initial_display_width,
+    app = AMTApp("AMT DEMO", initial_display_width,
                       WAV_SAMPLERATE, MEL_FRAME_SIZE, MEL_FRAME_HOP, NUM_MELS,
                       MEL_FMIN, MEL_FMAX, MEL_WINDOW, OV_MODEL_PATH,
                       OV_MODEL_CONV1X1_HEAD, OV_MODEL_LRELU_SLOPE,
@@ -643,11 +682,9 @@ def run_iamusica_demo_app(initial_display_width=400,
     app.main_window.show()
     # Wrap any exceptions into a dialog
     sys.excepthook = ExceptionDialog.excepthook
-    # run app
-    sys.exit(app.exec_())
+    sys.exit(app.exec())
 
-
-if __name__ == '__main__':
+if __name__ == "__main__":
     CONF = OmegaConf.structured(ConfDef())
     cli_conf = OmegaConf.from_cli()
     CONF = OmegaConf.merge(CONF, cli_conf)
@@ -655,8 +692,8 @@ if __name__ == '__main__':
     print(OmegaConf.to_yaml(CONF), end="\n\n\n")
 
     #
-    if CONF.APP == "iamusica_demo":
-        run_iamusica_demo_app(CONF.DISPLAY_WIDTH,
+    if CONF.APP == "amt_demo":
+        run_amt_demo_app(CONF.DISPLAY_WIDTH,
                               CONF.AUDIO_RECORDING_NUMHOPS,
                               CONF.PTHRESH, CONF.OVIF,
                               CONF.MEL_OFFSET, CONF.MEL_VSHIFT,

@@ -1,4 +1,3 @@
-
 # -*- coding:utf-8 -*-
 
 
@@ -208,10 +207,10 @@ class NamedForm(QtWidgets.QWidget):
         """
         result = {}
         for i in range(self.form.rowCount()):
-            par_name = self.form.itemAt(i, self.form.LabelRole).widget().text()
+            par_name = self.form.itemAt(i, QtWidgets.QFormLayout.ItemRole.LabelRole).widget().text()
             # Note that we expect w to implement a get_state() method that
             # returns its current state
-            w = self.form.itemAt(i, self.form.FieldRole).widget()
+            w = self.form.itemAt(i, QtWidgets.QFormLayout.ItemRole.FieldRole).widget()
             par_val = w.get_state()
             result[par_name] = par_val
         #
@@ -222,8 +221,8 @@ class NamedForm(QtWidgets.QWidget):
         """
         result = {}
         for i in range(self.form.rowCount()):
-            par_name = self.form.itemAt(i, self.form.LabelRole).widget().text()
-            w = self.form.itemAt(i, self.form.FieldRole).widget()
+            par_name = self.form.itemAt(i, QtWidgets.QFormLayout.ItemRole.LabelRole).widget().text()
+            w = self.form.itemAt(i, QtWidgets.QFormLayout.ItemRole.FieldRole).widget()
             result[par_name] = w
         #
         return result
