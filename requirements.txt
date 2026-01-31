@@ -1,0 +1,10 @@
+pyaudio
+PySide6 
+omegaconf
+h5py
+pytz
+torchaudio
+matplotlib
+scipy
+qdarkstyle
+coloredlogs
