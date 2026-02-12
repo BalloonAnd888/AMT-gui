@@ -7,6 +7,7 @@ from PySide6.QtWidgets import (
     )
 
 from audio_control import AudioControl
+from menu import MenuBar
 
 class AMTMainWindow(QMainWindow):
     def __init__(self):
@@ -15,6 +16,8 @@ class AMTMainWindow(QMainWindow):
         self.setWindowTitle("AMT")
 
         self.setMinimumSize(QSize(1100, 800))
+
+        self.menu = MenuBar(self)
 
         # Audio buttons
         self.audio_control = AudioControl()
