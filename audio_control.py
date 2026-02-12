@@ -1,4 +1,5 @@
 from PySide6.QtWidgets import (
+    QFileDialog,
     QMessageBox,
     QPushButton, 
     QWidget,
@@ -11,13 +12,13 @@ class AudioControl():
 
         # Audio buttons
         self.load_audio_button = QPushButton("Load Audio")
-        self.load_audio_button.clicked.connect(self.load_audio_button_clicked)
+        self.load_audio_button.pressed.connect(self.load_audio_button_clicked)
 
         self.record_audio_button = QPushButton("Record Audio")
-        self.record_audio_button.clicked.connect(self.record_audio_button_clicked)
+        self.record_audio_button.pressed.connect(self.record_audio_button_clicked)
 
         self.reset_audio_button = QPushButton("Reset Audio")
-        self.reset_audio_button.clicked.connect(self.reset_audio_button_clicked)
+        self.reset_audio_button.pressed.connect(self.reset_audio_button_clicked)
 
         self.audio_buttons_layout = QVBoxLayout()
         self.audio_buttons_layout.addWidget(self.load_audio_button)
@@ -29,6 +30,16 @@ class AudioControl():
 
     def load_audio_button_clicked(self):
         print("Load Audio button clicked")
+
+        audio_file_name, _ = QFileDialog.getOpenFileName(
+            self.audio_buttons,
+            "Load Audio",
+            "",
+            "Audio Files (*.wav *.mp3)"
+        )
+
+        if audio_file_name:
+            print(f"File selected: {audio_file_name}")
         
     def record_audio_button_clicked(self):
         print("Record Audio button clicked")
