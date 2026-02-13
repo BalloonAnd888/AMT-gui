@@ -11,6 +11,7 @@ from PySide6.QtWidgets import (
     )
 
 from audio_control import AudioControl
+from audio_player import AudioPlayer
 from menu import MenuBar
 
 class AMTMainWindow(QMainWindow):
@@ -43,6 +44,7 @@ class AMTMainWindow(QMainWindow):
 
         # Audio buttons
         self.audio_control = AudioControl()
+        self.audio_player = AudioPlayer()
 
         # Settings
         settings = QLabel("Settings")
@@ -58,6 +60,7 @@ class AMTMainWindow(QMainWindow):
 
         bottom = QHBoxLayout()
         bottom.addLayout(audioLayout)
+        bottom.addWidget(self.audio_player.audio_control_buttons)
         bottom.addWidget(settings)
 
         layout = QVBoxLayout()
