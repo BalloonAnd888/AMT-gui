@@ -1,3 +1,4 @@
+from PySide6.QtCore import QObject, Signal
 from PySide6.QtWidgets import (
     QFileDialog,
     QMessageBox,
@@ -6,7 +7,9 @@ from PySide6.QtWidgets import (
     QVBoxLayout,
     )
 
-class AudioControl():
+class AudioControl(QObject):
+    audio_loaded = Signal(str)
+
     def __init__(self):
         super().__init__()
 
@@ -40,6 +43,7 @@ class AudioControl():
 
         if audio_file_name:
             print(f"File selected: {audio_file_name}")
+            self.audio_loaded.emit(audio_file_name)
         
     def record_audio_button_clicked(self):
         print("Record Audio button clicked")

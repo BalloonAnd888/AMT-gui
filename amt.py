@@ -45,6 +45,7 @@ class AMTMainWindow(QMainWindow):
         # Audio buttons
         self.audio_control = AudioControl()
         self.audio_player = AudioPlayer()
+        self.audio_control.audio_loaded.connect(self.audio_player.load_audio)
 
         # Settings
         settings = QLabel("Settings")
